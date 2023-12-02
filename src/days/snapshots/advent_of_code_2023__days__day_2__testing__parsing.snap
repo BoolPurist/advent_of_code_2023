@@ -1,0 +1,24 @@
+---
+source: src/days/day_2.rs
+expression: actual
+---
+Game {
+    id: 2,
+    sets: [
+        Set {
+            red: 0,
+            blue: 1,
+            green: 2,
+        },
+        Set {
+            red: 1,
+            blue: 4,
+            green: 3,
+        },
+        Set {
+            red: 0,
+            blue: 1,
+            green: 1,
+        },
+    ],
+}
