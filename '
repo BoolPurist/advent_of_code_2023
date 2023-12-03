@@ -24,6 +24,8 @@ pub enum Symbol {
     Nothing,
 }
 
+type Grid<'a> = &'a [Vec<Symbol>];
+
 impl From<char> for Symbol {
     fn from(value: char) -> Self {
         match value {
@@ -33,13 +35,13 @@ impl From<char> for Symbol {
         }
     }
 }
-fn get_part_number_gears(grid: &Array2D<Symbol>) -> Vec<(ColumnRange, ColumnRange)> {
-    let mut already_found: HashSet<Coords> = HashSet::new();
+fn get_part_number_gears(grid: Grid) -> Vec<(ColumnRange, ColumnRange)> {
+    let mut already_found: HashSet<(usize, usize)> = HashSet::new();
     get_all_symbols(grid)
         .into_iter()
-        .filter(|coords| matches!(grid_2d::access_grid(grid, *coords), Symbol::Symb('*')))
-        .filter_map(|coords| {
-            let might_be_two = get_part_number_around(grid, &mut already_found, coords);
+        .filter(|(row, column)| matches!(access_grid(grid, *row, *column), Symbol::Symb('*')))
+        .filter_map(|(row, column)| {
+            let might_be_two = get_part_number_around(grid, &mut already_found, row, column);
             if might_be_two.len() == 2 {
                 Some((
                     might_be_two.get(0).unwrap().clone(),
@@ -65,15 +67,80 @@ fn parse(input: &str) -> Array2D<Symbol> {
     Array2D::from_rows(&symbols).unwrap()
 }
 
-fn get_all_symbols(grid: &Array2D<Symbol>) -> Vec<Coords> {
-    let mut all_coords = Vec::default();
+fn get_all_symbols(grid: &Array2D<Symbol>) -> Vec<(usize, usize)> {
+    let mut coords = Vec::default();
     for coords in grid_2d::all_coords(grid) {
         let val = grid_2d::access_grid(grid, coords);
         if matches!(val, Symbol::Symb(_)) {
-            all_coords.push(coords);
+            coords.push((row_i, colum_i));
+        }
+        for (colum_i, colum) in row.into_iter().enumerate() {}
+    }
+    coords
+}
+
+fn access_grid(grid: Grid, row: usize, column: usize) -> &Symbol {
+    grid.get(row).unwrap().get(column).unwrap()
+}
+#[derive(Debug)]
+pub struct MovedToCell<'a> {
+    symbol: &'a Symbol,
+    row: usize,
+    column: usize,
+}
+
+impl<'a> MovedToCell<'a> {
+    pub fn new(grid: Grid<'a>, row: usize, column: usize) -> Self {
+        Self {
+            symbol: access_grid(grid, row, column),
+            row,
+            column,
         }
     }
-    all_coords
+}
+fn go_left(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    match column.overflowing_sub(1) {
+        (_, true) => None,
+        (new_column, false) => Some(MovedToCell::new(grid, row, new_column)),
+    }
+}
+fn go_right(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let new_column = column + 1;
+    if new_column < grid.get(0).unwrap().len() {
+        Some(MovedToCell::new(grid, row, new_column))
+    } else {
+        None
+    }
+}
+fn go_up(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    match row.overflowing_sub(1) {
+        (_, true) => None,
+        (new_row, false) => Some(MovedToCell::new(grid, new_row, column)),
+    }
+}
+fn go_down(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let new_row = row + 1;
+    if new_row < grid.len() {
+        Some(MovedToCell::new(grid, new_row, column))
+    } else {
+        None
+    }
+}
+fn go_left_up(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let moved = go_left(grid, row, column)?;
+    go_up(grid, moved.row, moved.column)
+}
+fn go_right_up(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let moved = go_right(grid, row, column)?;
+    go_up(grid, moved.row, moved.column)
+}
+fn go_left_down(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let moved = go_left(grid, row, column)?;
+    go_down(grid, moved.row, moved.column)
+}
+fn go_right_down(grid: Grid, row: usize, column: usize) -> Option<MovedToCell> {
+    let moved = go_right(grid, row, column)?;
+    go_down(grid, moved.row, moved.column)
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -83,20 +150,13 @@ struct ColumnRange {
     end: usize,
 }
 
-fn calc_part_numbers(grid: &Array2D<Symbol>, columns: &[ColumnRange]) -> Vec<usize> {
+fn calc_part_numbers(grid: Grid, columns: &[ColumnRange]) -> Vec<usize> {
     let mut calc_numbers = Vec::new();
-
     for next_range in columns {
         let mut factor = 1;
         let mut number = 0;
         for next_number in (next_range.start..=next_range.end).rev() {
-            if let Symbol::Digit(numeric_val) = grid_2d::access_grid(
-                grid,
-                Coords {
-                    x: next_number,
-                    y: next_range.row,
-                },
-            ) {
+            if let Symbol::Digit(numeric_val) = access_grid(grid, next_range.row, next_number) {
                 number += factor * (*numeric_val) as usize;
                 factor *= 10;
             } else {
@@ -109,90 +169,102 @@ fn calc_part_numbers(grid: &Array2D<Symbol>, columns: &[ColumnRange]) -> Vec<usi
 }
 
 fn get_part_number_around(
-    grid: &Array2D<Symbol>,
-    already_found: &mut HashSet<Coords>,
-    coords: Coords,
+    grid: Grid,
+    already_found: &mut HashSet<(usize, usize)>,
+    row: usize,
+    colum: usize,
 ) -> Vec<ColumnRange> {
     let mut output = Vec::new();
 
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_left(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_left(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_right(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_right(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_up(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_up(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_down(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_down(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_left_up(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_left_up(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_left_down(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_left_down(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_right_up(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_right_up(grid, r, c),
         &mut output,
     );
     travers_and_update(
         grid,
         already_found,
-        coords,
-        |grid, coords| grid_2d::go_right_down(grid, coords),
+        row,
+        colum,
+        |grid, r, c| go_right_down(grid, r, c),
         &mut output,
     );
     return output;
     fn travers_and_update(
-        grid: &Array2D<Symbol>,
-        already_found: &mut HashSet<Coords>,
-        coords: Coords,
-        on_start: impl Fn(&Array2D<Symbol>, Coords) -> grid_2d::MaybeNextCell<Symbol>,
+        grid: Grid,
+        already_found: &mut HashSet<(usize, usize)>,
+        row: usize,
+        column: usize,
+        on_start: impl Fn(Grid, usize, usize) -> Option<MovedToCell>,
         output: &mut Vec<ColumnRange>,
     ) {
-        if let Some(to_add) = travers_colums_at(grid, already_found, coords, on_start) {
+        if let Some(to_add) = travers_colums_at(grid, already_found, row, column, on_start) {
             output.push(to_add);
         }
     }
     fn travers_colums_at(
-        grid: &Array2D<Symbol>,
-        already_found: &mut HashSet<Coords>,
-        coords: Coords,
-        on_start: impl Fn(&Array2D<Symbol>, Coords) -> grid_2d::MaybeNextCell<Symbol>,
+        grid: Grid,
+        already_found: &mut HashSet<(usize, usize)>,
+        row: usize,
+        column: usize,
+        on_start: impl Fn(Grid, usize, usize) -> Option<MovedToCell>,
     ) -> Option<ColumnRange> {
-        let (sym, start_coords) = on_start(grid, coords)?;
+        let start = on_start(grid, row, column)?;
+        let sym = start.symbol;
         if let Symbol::Digit(_) = sym {
-            let (row, column) = (start_coords.y, start_coords.x);
-            if !already_found.insert(start_coords) {
+            let (row, column) = (start.row, start.column);
+            if !already_found.insert((row, column)) {
                 return None;
             }
             let mut range = ColumnRange {
@@ -200,29 +272,32 @@ fn get_part_number_around(
                 start: column,
                 end: column,
             };
-
-            let mut current_coords = start_coords;
-            while let Some((Symbol::Digit(_), Coords { x, .. })) =
-                grid_2d::go_left(grid, current_coords)
+            let mut current_colum = column;
+            while let Some(MovedToCell {
+                symbol: Symbol::Digit(_),
+                column,
+                ..
+            }) = go_left(grid, row, current_colum)
             {
-                current_coords = Coords { y: row, x };
-                if !already_found.insert(current_coords) {
+                current_colum = column;
+                if !already_found.insert((row, current_colum)) {
                     break;
                 }
 
-                range.start = x;
+                range.start = current_colum;
             }
-
-            current_coords = start_coords;
-            while let Some((Symbol::Digit(_), Coords { x, .. })) =
-                grid_2d::go_right(grid, current_coords)
+            let mut current_colum = column;
+            while let Some(MovedToCell {
+                symbol: Symbol::Digit(_),
+                column,
+                ..
+            }) = go_right(grid, row, current_colum)
             {
-                current_coords = Coords { y: row, x };
-                if !already_found.insert(current_coords) {
+                current_colum = column;
+                if !already_found.insert((row, current_colum)) {
                     break;
                 }
-
-                range.end = x;
+                range.end = current_colum;
             }
 
             Some(range)
@@ -231,11 +306,11 @@ fn get_part_number_around(
         }
     }
 }
-fn get_all_part_number(grid: &Array2D<Symbol>) -> Vec<ColumnRange> {
-    let mut already_found: HashSet<Coords> = HashSet::new();
+fn get_all_part_number(grid: Grid) -> Vec<ColumnRange> {
+    let mut already_found: HashSet<(usize, usize)> = HashSet::new();
     let mut output = Vec::new();
-    for coords in get_all_symbols(grid) {
-        let to_add = get_part_number_around(grid, &mut already_found, coords);
+    for (row, colum) in get_all_symbols(grid) {
+        let to_add = get_part_number_around(grid, &mut already_found, row, colum);
         output.extend(to_add.into_iter());
     }
 
@@ -259,17 +334,8 @@ mod testing {
     #[test]
     fn parsing_day_3_input_all_symbols_find() {
         let parsed = parse(TEST_INPUT);
-        let mut all_sym_coords = get_all_symbols(&parsed);
-        let mut expected: Vec<Coords> = vec![
-            (1, 3).into(),
-            (3, 6).into(),
-            (4, 3).into(),
-            (5, 5).into(),
-            (8, 3).into(),
-            (8, 5).into(),
-        ];
-        expected.sort();
-        all_sym_coords.sort();
+        let all_sym_coords = get_all_symbols(&parsed);
+        let expected: Vec<(usize, usize)> = vec![(1, 3), (3, 6), (4, 3), (5, 5), (8, 3), (8, 5)];
         assert_eq!(&expected, &all_sym_coords);
     }
     const COLUMS_RANGES_INPUT: &[ColumnRange] = &[

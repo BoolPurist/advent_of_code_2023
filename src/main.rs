@@ -5,6 +5,8 @@ use days::day_1;
 use days::day_2;
 use days::day_3;
 
+pub mod prelude;
+mod utils;
 use crate::cli::TaskOverCli;
 mod days;
 
