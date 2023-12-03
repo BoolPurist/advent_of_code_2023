@@ -1,6 +1,16 @@
 use crate::utils::Coords;
 use array2d::Array2D;
 
+pub fn text_to_grid<T>(text: &str, on_map: impl Fn(char) -> T) -> Array2D<T>
+where
+    T: Clone,
+{
+    let chars: Vec<Vec<T>> = text
+        .lines()
+        .map(|text| text.trim().chars().map(|next| on_map(next)).collect())
+        .collect();
+    Array2D::from_rows(&chars).unwrap()
+}
 pub fn access_grid<T>(grid: &Array2D<T>, coords: Coords) -> &T {
     grid.get(coords.y, coords.x).unwrap()
 }

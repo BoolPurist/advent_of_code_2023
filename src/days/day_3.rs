@@ -53,16 +53,7 @@ fn get_part_number_gears(grid: &Array2D<Symbol>) -> Vec<(ColumnRange, ColumnRang
 }
 
 fn parse(input: &str) -> Array2D<Symbol> {
-    let symbols: Vec<Vec<Symbol>> = input
-        .lines()
-        .map(|line| {
-            line.trim()
-                .chars()
-                .map(Symbol::from)
-                .collect::<Vec<Symbol>>()
-        })
-        .collect();
-    Array2D::from_rows(&symbols).unwrap()
+    grid_2d::text_to_grid(input, Symbol::from)
 }
 
 fn get_all_symbols(grid: &Array2D<Symbol>) -> Vec<Coords> {
