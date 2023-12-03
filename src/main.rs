@@ -3,6 +3,7 @@ use std::{collections::HashMap, process::ExitCode};
 use clap::Parser;
 use days::day_1;
 use days::day_2;
+use days::day_3;
 
 use crate::cli::TaskOverCli;
 mod days;
@@ -17,6 +18,8 @@ fn main() -> ExitCode {
     register_handler(&mut tasks_handlers, 1, 2, day_1::handle_task_2);
     register_handler(&mut tasks_handlers, 2, 1, day_2::handle_task);
     register_handler(&mut tasks_handlers, 2, 2, day_2::handle_task_2);
+    register_handler(&mut tasks_handlers, 3, 1, day_3::handle_task);
+    register_handler(&mut tasks_handlers, 3, 2, day_3::handle_task_2);
 
     match tasks_handlers.get(&(args.day, args.task)) {
         Some(handler) => {
