@@ -41,19 +41,6 @@ fn get_seqs(cards: &Card) -> Vec<u32> {
         .cloned()
         .collect()
 }
-fn get_winnig_indexes(cards: &Card) -> Vec<usize> {
-    cards
-        .actual
-        .iter()
-        .filter_map(|&next| {
-            cards
-                .winning
-                .iter()
-                .position(|&ele| ele == next)
-                .map(|index| index + 1)
-        })
-        .collect()
-}
 
 fn calculate_score_of(points: &[u32]) -> u32 {
     if points.is_empty() {
