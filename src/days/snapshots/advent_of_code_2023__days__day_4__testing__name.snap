@@ -1,0 +1,25 @@
+---
+source: src/days/day_4.rs
+expression: parsed
+---
+[
+    Card {
+        winning: [
+            41,
+            48,
+            83,
+            86,
+            17,
+        ],
+        actual: [
+            83,
+            86,
+            6,
+            31,
+            17,
+            9,
+            48,
+            53,
+        ],
+    },
+]
