@@ -5,6 +5,7 @@ use days::day_1;
 use days::day_2;
 use days::day_3;
 use days::day_4;
+use days::day_5;
 
 pub mod prelude;
 mod utils;
@@ -25,6 +26,9 @@ fn main() -> ExitCode {
     register_handler(&mut tasks_handlers, 3, 2, day_3::handle_task_2);
     register_handler(&mut tasks_handlers, 4, 1, day_4::handle_task);
     register_handler(&mut tasks_handlers, 4, 2, day_4::handle_task_2);
+    register_handler(&mut tasks_handlers, 5, 1, day_5::handle_task);
+    register_handler(&mut tasks_handlers, 5, 2, day_5::handle_task_2);
+    register_handler(&mut tasks_handlers, 5, 3, day_5::handle_task_3);
 
     match tasks_handlers.get(&(args.day, args.task)) {
         Some(handler) => {

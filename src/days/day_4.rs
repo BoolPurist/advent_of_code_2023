@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 pub fn handle_task(input: String) -> String {
     let parsed = parse(&input);
     parsed
@@ -19,6 +21,7 @@ pub fn handle_task_2(input: String) -> String {
 
     for index in 0..plot.len() {
         let (count, seq) = plot.get(index).unwrap().clone();
+
         for &next_card in seq.iter() {
             plot.get_mut(next_card).unwrap().0 += count;
         }
@@ -33,7 +36,7 @@ pub fn handle_task_2(input: String) -> String {
         (start..end).collect()
     }
 }
-fn get_seqs(cards: &Card) -> Vec<u32> {
+fn get_seqs(cards: &Card) -> Rc<[u32]> {
     cards
         .actual
         .iter()
@@ -94,7 +97,7 @@ mod testing {
         let parsed = parse(input);
         let actual = get_seqs(parsed.get(0).unwrap());
         let expected: Vec<u32> = vec![83, 86, 17, 48];
-        assert_eq!(expected, actual);
+        assert_eq!(expected.as_slice(), actual.as_ref());
     }
     #[test]
     fn day_4_get_score_of() {
